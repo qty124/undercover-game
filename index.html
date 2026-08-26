@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a1f" />
+  <title>🕵️ 卧底风云 · 三人聚会游戏</title>
+  <style>
+    /* ========== 基础重置 ========== */
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+      color: #f0f0ff;
+      background: linear-gradient(135deg, #0a0a1f 0%, #1a0a2e 35%, #0d1b3a 70%, #0a0a1f 100%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+    /* 背景装饰光斑 */
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      width: 50vmax; height: 50vmax;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .35;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before { background: #6a3ec9; top: -15vmax; left: -15vmax; }
+    body::after  { background: #1e6dc9; bottom: -15vmax; right: -15vmax; }
+
+    /* ========== 布局 ========== */
+    .container {
+      position: relative; z-index: 1;
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 28px 18px 60px;
+    }
+    header { text-align: center; margin-bottom: 26px; }
+    h1 {
+      font-size: clamp(28px, 6vw, 42px);
+      letter-spacing: 2px;
+      text-shadow: 0 0 24px rgba(160, 120, 255, .6);
+    }
+    .subtitle {
+      margin-top: 8px;
+      color: #b6b6d8;
+      font-size: 14px;
+    }
+
+    /* ========== 控制条 ========== */
+    .control-bar {
+      display: flex; justify-content: center; gap: 12px;
+      margin-bottom: 22px; flex-wrap: wrap;
+    }
+    .btn {
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #f0f0ff;
+      padding: 11px 22px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      transition: transform .15s ease, box-shadow .25s ease, background .25s ease;
+      box-shadow: 0 0 14px rgba(120, 100, 220, .25);
+    }
+    .btn:hover { transform: translateY(-1px); background: rgba(255,255,255,.12); }
+    .btn:active { transform: translateY(0); }
+    .btn.primary {
+      background: linear-gradient(135deg, #7a3ec9, #1e6dc9);
+      border-color: transparent;
+      box-shadow: 0 0 22px rgba(120, 80, 220, .55);
+    }
+    .btn.primary:hover { box-shadow: 0 0 32px rgba(150, 100, 255, .75); }
+    .btn.danger { background: linear-gradient(135deg, #c9364a, #7a1e2c); }
+    .btn.reset { background: linear-gradient(135deg, #1ec97e, #1e6dc9); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+
+    /* ========== 卡牌区 ========== */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 26px;
+    }
+    .card {
+      position: relative;
+      aspect-ratio: 2 / 3;
+      perspective: 1000px;
+      cursor: pointer;
+    }
+    .card-inner {
+      position: absolute; inset: 0;
+      transform-style: preserve-3d;
+      transition: transform .7s cubic-bezier(.4,.0,.2,1);
+      border-radius: 18px;
+    }
+    .card.flipped .card-inner { transform: rotateY(180deg); }
+    .card-face {
+      position: absolute; inset: 0;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: 18px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 12px;
+      text-align: center;
+      border: 1px solid rgba(255,255,255,.18);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 8px 32px rgba(0,0,0,.45), inset 0 0 24px rgba(255,255,255,.05);
+    }
+    .card-back {
+      background: linear-gradient(135deg, rgba(120,80,220,.18), rgba(30,109,201,.18));
+    }
+    .card-back .emoji { font-size: clamp(34px, 8vw, 56px); margin-bottom: 8px; filter: drop-shadow(0 0 12px rgba(160,120,255,.7)); }
+    .card-back .label { font-size: clamp(14px, 3.2vw, 18px); color: #d0d0ff; letter-spacing: 1px; }
+    .card-back .hint  { font-size: 12px; color: #9999c8; margin-top: 6px; }
+    .card-front {
+      transform: rotateY(180deg);
+      color: #fff;
+      font-weight: 700;
+    }
+    .card-front.civilian {
+      background: linear-gradient(135deg, rgba(30,109,201,.55), rgba(30,109,201,.25));
+      border-color: rgba(100,180,255,.5);
+      box-shadow: 0 0 28px rgba(30,109,201,.55), inset 0 0 24px rgba(255,255,255,.08);
+    }
+    .card-front.spy {
+      background: linear-gradient(135deg, rgba(201,54,74,.55), rgba(122,30,44,.35));
+      border-color: rgba(255,120,140,.5);
+      box-shadow: 0 0 28px rgba(201,54,74,.55), inset 0 0 24px rgba(255,255,255,.08);
+    }
+    .card-front .role-tag {
+      font-size: 13px; padding: 3px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.25);
+      margin-bottom: 10px;
+      letter-spacing: 1px;
+    }
+    .card-front .word {
+      font-size: clamp(20px, 5vw, 30px);
+      word-break: break-all;
+      line-height: 1.3;
+    }
+    .card-front .spy-icon { font-size: clamp(40px, 9vw, 60px); margin-bottom: 10px; }
+    .card-front .spy-text { font-size: clamp(14px, 3.4vw, 17px); }
+
+    .card.marked-spy .card-front {
+      box-shadow: 0 0 36px rgba(201,54,74,.85), inset 0 0 24px rgba(255,255,255,.12);
+      animation: pulse-red 1.6s ease-in-out infinite;
+    }
+    .card.marked-civilian .card-front {
+      box-shadow: 0 0 36px rgba(30,109,201,.85), inset 0 0 24px rgba(255,255,255,.12);
+    }
+    @keyframes pulse-red {
+      0%, 100% { box-shadow: 0 0 26px rgba(201,54,74,.65), inset 0 0 24px rgba(255,255,255,.08); }
+      50%      { box-shadow: 0 0 44px rgba(201,54,74,.95), inset 0 0 24px rgba(255,255,255,.15); }
+    }
+
+    /* ========== 投票/猜词区 ========== */
+    .action-area {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 640px) {
+      .action-area { grid-template-columns: 1fr; }
+      .cards { gap: 10px; }
+    }
+    .panel {
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 18px;
+      padding: 18px;
+      box-shadow: 0 8px 32px rgba(0,0,0,.35);
+    }
+    .panel h2 { color: #d8d8ff; font-size: 16px; margin-bottom: 12px; letter-spacing: 1px; }
+    .vote-row { display: flex; gap: 8px; }
+    .vote-row .btn { flex: 1; padding: 10px 0; font-size: 14px; }
+    .guess-row { display: flex; gap: 8px; }
+    .guess-row input {
+      flex: 1; min-width: 0;
+      background: rgba(0,0,0,.35);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff;
+      padding: 11px 14px;
+      border-radius: 999px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .guess-row input:focus { border-color: rgba(160,120,255,.7); box-shadow: 0 0 0 3px rgba(160,120,255,.18); }
+    .panel-hint {
+      margin-top: 10px;
+      font-size: 12px;
+      color: #9999c8;
+      line-height: 1.5;
+    }
+
+    /* ========== 弹窗 ========== */
+    .modal-mask {
+      position: fixed; inset: 0;
+      background: rgba(5, 5, 20, .65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: none;
+      align-items: center; justify-content: center;
+      z-index: 100;
+      padding: 20px;
+    }
+    .modal-mask.show { display: flex; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .modal {
+      max-width: 380px; width: 100%;
+      background: linear-gradient(135deg, rgba(40,20,80,.85), rgba(20,40,90,.85));
+      border: 1px solid rgba(255,255,255,.18);
+      border-radius: 22px;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 24px 64px rgba(0,0,0,.55), 0 0 40px rgba(160,120,255,.4);
+      animation: pop .35s cubic-bezier(.2,.9,.3,1.2);
+    }
+    @keyframes pop {
+      from { transform: scale(.7); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+    .modal .result-emoji { font-size: 56px; margin-bottom: 10px; }
+    .modal h3 {
+      font-size: 24px; letter-spacing: 2px; margin-bottom: 8px;
+      text-shadow: 0 0 16px rgba(160,120,255,.6);
+    }
+    .modal.win-civilian h3 { color: #6fc3ff; }
+    .modal.win-spy h3      { color: #ff6f8c; }
+    .modal p { color: #c8c8e8; font-size: 14px; line-height: 1.6; margin-bottom: 18px; }
+    .modal .reveal {
+      background: rgba(0,0,0,.35);
+      border-radius: 12px;
+      padding: 10px;
+      margin-bottom: 18px;
+      font-size: 13px;
+      color: #d8d8ff;
+    }
+    .modal .reveal .word { color: #ffe070; font-weight: 700; font-size: 15px; }
+
+    /* ========== 页脚 ========== */
+    footer {
+      text-align: center;
+      margin-top: 28px;
+      color: #7a7a9c;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🕵️ 卧底风云</h1>
+      <p class="subtitle">三人聚会 · 一人潜伏 · 谁是间谍？</p>
+    </header>
+
+    <div class="control-bar">
+      <button class="btn primary" id="startBtn">🎲 开始游戏</button>
+      <button class="btn reset" id="resetBtn" disabled>🔄 再来一局</button>
+    </div>
+
+    <div class="cards" id="cards">
+      <!-- JS 渲染 3 张卡牌 -->
+    </div>
+
+    <div class="action-area">
+      <div class="panel">
+        <h2>🗳️ 平民投票</h2>
+        <div class="vote-row">
+          <button class="btn" data-vote="0" disabled>投玩家 1</button>
+          <button class="btn" data-vote="1" disabled>投玩家 2</button>
+          <button class="btn" data-vote="2" disabled>投玩家 3</button>
+        </div>
+        <p class="panel-hint">所有人查看完纸条后，大家讨论决定投出谁是间谍。</p>
+      </div>
+
+      <div class="panel">
+        <h2>🕵️ 间谍猜词</h2>
+        <div class="guess-row">
+          <input type="text" id="guessInput" placeholder="间谍在此输入猜测的词语…" maxlength="20" disabled />
+          <button class="btn primary" id="guessBtn" disabled>猜！</button>
+        </div>
+        <p class="panel-hint">间谍若能猜中平民手里的词，直接获胜；猜错则暴露身份。</p>
+      </div>
+    </div>
+
+    <footer>👥 玩法：① 三人轮流点击卡牌查看身份 → ② 投票抓间谍 或 ③ 间谍盲猜词语</footer>
+  </div>
+
+  <!-- 结果弹窗 -->
+  <div class="modal-mask" id="modal">
+    <div class="modal" id="modalBody">
+      <div class="result-emoji" id="modalEmoji">🎉</div>
+      <h3 id="modalTitle">平民胜利！</h3>
+      <p id="modalDesc">你们成功揪出了间谍！</p>
+      <div class="reveal">
+        本局词语：<span class="word" id="modalWord">—</span><br/>
+        间谍是：<strong id="modalSpy">玩家 ?</strong>
+      </div>
+      <button class="btn reset" id="modalReset">🔄 再来一局</button>
+    </div>
+  </div>
+
+  <script>
+    // ========== 词库：110 个常见词，覆盖食物 / 水果 / 动物 / 日常 / 场所 / 运动 ==========
+    const WORDS = [
+      // 食物 (20)
+      "饺子","包子","馒头","粽子","月饼","汤圆","烧麦","春卷","煎饼","油条",
+      "豆浆","米饭","拉面","火锅","烧烤","麻辣烫","披萨","汉堡","三明治","寿司",
+      // 水果 (20)
+      "苹果","香蕉","橙子","葡萄","西瓜","哈密瓜","草莓","蓝莓","樱桃","桃子",
+      "梨","菠萝","芒果","猕猴桃","火龙果","椰子","柠檬","石榴","柚子","杏",
+      // 动物 (20)
+      "猫","狗","兔子","仓鼠","龙猫","鹦鹉","金鱼","乌龟","鸭子","大鹅",
+      "公鸡","绵羊","山羊","奶牛","小猪","小马","毛驴","老虎","狮子","熊猫",
+      // 日常用品 (20)
+      "手机","电脑","平板","耳机","充电宝","雨伞","钥匙","钱包","手表","眼镜",
+      "水杯","保温杯","牙刷","毛巾","枕头","被子","闹钟","台灯","吹风机","梳子",
+      // 场所 (20)
+      "学校","医院","超市","商场","公园","图书馆","电影院","体育馆","游泳池","博物馆",
+      "火车站","机场","地铁站","加油站","银行","邮局","餐厅","咖啡店","理发店","健身房",
+      // 运动 / 乐器 (10)
+      "篮球","足球","乒乓球","羽毛球","网球","排球","棒球","高尔夫","钢琴","吉他"
+    ];
+
+    // ========== 游戏状态 ==========
+    let state = {
+      spyIndex: -1,         // 间谍是 0/1/2 中的哪一个
+      currentWord: "",      // 本局平民的词语
+      flipped: [false, false, false],
+      gameOver: false,
+      started: false
+    };
+
+    // ========== DOM 引用 ==========
+    const $cards       = document.getElementById("cards");
+    const $startBtn    = document.getElementById("startBtn");
+    const $resetBtn    = document.getElementById("resetBtn");
+    const $guessInput  = document.getElementById("guessInput");
+    const $guessBtn    = document.getElementById("guessBtn");
+    const $voteBtns    = document.querySelectorAll("[data-vote]");
+    const $modal       = document.getElementById("modal");
+    const $modalBody   = document.getElementById("modalBody");
+    const $modalEmoji  = document.getElementById("modalEmoji");
+    const $modalTitle  = document.getElementById("modalTitle");
+    const $modalDesc   = document.getElementById("modalDesc");
+    const $modalWord   = document.getElementById("modalWord");
+    const $modalSpy    = document.getElementById("modalSpy");
+    const $modalReset  = document.getElementById("modalReset");
+
+    // ========== 渲染 ==========
+    function renderCards() {
+      $cards.innerHTML = "";
+      for (let i = 0; i < 3; i++) {
+        const flipped = state.flipped[i];
+        const isSpy   = (i === state.spyIndex);
+
+        const card = document.createElement("div");
+        card.className = "card" + (flipped ? " flipped" : "") +
+                         (state.gameOver && flipped && isSpy ? " marked-spy" : "") +
+                         (state.gameOver && flipped && !isSpy ? " marked-civilian" : "");
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="card-face card-back">
+              <div class="emoji">🎴</div>
+              <div class="label">玩家 ${i + 1}</div>
+              <div class="hint">点击翻开</div>
+            </div>
+            <div class="card-face card-front ${isSpy ? 'spy' : 'civilian'}">
+              ${isSpy
+                ? `<div class="spy-icon">🕵️</div>
+                   <div class="role-tag">间谍</div>
+                   <div class="spy-text">空纸条</div>`
+                : `<div class="role-tag">平民</div>
+                   <div class="word">${state.currentWord}</div>`}
+            </div>
+          </div>
+        `;
+        card.addEventListener("click", () => flipCard(i));
+        $cards.appendChild(card);
+      }
+    }
+
+    function renderControls() {
+      const canVote  = state.started && !state.gameOver;
+      const canGuess = state.started && !state.gameOver;
+
+      $voteBtns.forEach(b => b.disabled = !canVote);
+      $guessBtn.disabled  = !canGuess;
+      $guessInput.disabled = !canGuess;
+      $startBtn.disabled  = state.started && !state.gameOver;
+      $resetBtn.disabled  = !state.gameOver && !state.started;
+    }
+
+    // ========== 行为 ==========
+    function flipCard(i) {
+      if (!state.started || state.gameOver) return;
+      if (state.flipped[i]) return;        // 已翻开的不响应
+      state.flipped[i] = true;
+      renderCards();
+      // 三张都翻开后，启用投票/猜词（其实一开始就可以；这里保留语义清晰）
+    }
+
+    function startGame() {
+      if (state.started && !state.gameOver) return;
+      state.spyIndex   = Math.floor(Math.random() * 3);
+      state.currentWord = WORDS[Math.floor(Math.random() * WORDS.length)];
+      state.flipped    = [false, false, false];
+      state.gameOver   = false;
+      state.started    = true;
+      $guessInput.value = "";
+      $modal.classList.remove("show");
+      renderCards();
+      renderControls();
+    }
+
+    function resetGame() {
+      state = { spyIndex: -1, currentWord: "", flipped: [false, false, false], gameOver: false, started: false };
+      $guessInput.value = "";
+      $modal.classList.remove("show");
+      renderCards();
+      renderControls();
+    }
+
+    function vote(target) {
+      if (!state.started || state.gameOver) return;
+      const hit = (target === state.spyIndex);
+      showResult(
+        hit ? "win-civilian" : "win-spy",
+        hit ? "🎉" : "💀",
+        hit ? "平民胜利！" : "间谍胜利！",
+        hit ? "你们成功揪出了间谍，词保住了！" : "很遗憾，平民投错了人，间谍成功存活。"
+      );
+      state.gameOver = true;
+      renderCards();
+      renderControls();
+    }
+
+    function spyGuess() {
+      if (!state.started || state.gameOver) return;
+      const guess = $guessInput.value.trim();
+      if (!guess) {
+        alert("请先输入猜测的词语～");
+        return;
+      }
+      const hit = (guess === state.currentWord);
+      showResult(
+        hit ? "win-spy" : "win-civilian",
+        hit ? "💀" : "🎉",
+        hit ? "间谍胜利！" : "猜错，间谍暴露，平民胜利！",
+        hit ? "间谍准确猜中平民手里的词，绝地翻盘！" : "间谍猜错了词，身份暴露，功亏一篑。"
+      );
+      state.gameOver = true;
+      renderCards();
+      renderControls();
+    }
+
+    function showResult(cls, emoji, title, desc) {
+      $modalBody.className = "modal " + cls;
+      $modalEmoji.textContent = emoji;
+      $modalTitle.textContent = title;
+      $modalDesc.textContent  = desc;
+      $modalWord.textContent  = state.currentWord;
+      $modalSpy.textContent   = "玩家 " + (state.spyIndex + 1);
+      $modal.classList.add("show");
+    }
+
+    // ========== 事件绑定 ==========
+    $startBtn.addEventListener("click", startGame);
+    $resetBtn.addEventListener("click", resetGame);
+    $modalReset.addEventListener("click", () => {
+      resetGame();
+      // 自动开始下一局，体验更顺滑
+      setTimeout(startGame, 250);
+    });
+    $guessBtn.addEventListener("click", spyGuess);
+    $guessInput.addEventListener("keydown", e => { if (e.key === "Enter") spyGuess(); });
+    $voteBtns.forEach(b => b.addEventListener("click", () => vote(parseInt(b.dataset.vote, 10))));
+
+    // ========== 初始渲染 ==========
+    renderCards();
+    renderControls();
+  </script>
+</body>
+</html>
